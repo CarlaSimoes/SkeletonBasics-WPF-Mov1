@@ -10,7 +10,6 @@ namespace Microsoft.Samples.Kinect.SkeletonBasics
     using System.IO;
     using System.Windows;
     using System.Windows.Media;
-    //using System.Windows.Media.DrawingContext;
     using Microsoft.Kinect;
 
 
@@ -62,7 +61,7 @@ namespace Microsoft.Samples.Kinect.SkeletonBasics
         /// <summary>
         /// Pen used for drawing bones that are currently tracked
         /// </summary>
-        private readonly Pen trackedBonePen = new Pen(Brushes.Green, 6);
+        private Pen trackedBonePen = new Pen(Brushes.Gray, 6);
 
         /// <summary>
         /// Pen used for drawing bones that are currently inferred
@@ -87,13 +86,18 @@ namespace Microsoft.Samples.Kinect.SkeletonBasics
         /// Drawing image that we will display
         /// </summary>
         private DrawingImage imageSource;
-
+        
+        /// <summary>
+        /// Detecting move of both legs from first position to the second
+        /// </summary>
+       
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
         /// </summary>
         public MainWindow()
         {
             InitializeComponent();
+            
         }
 
         /// <summary>
@@ -218,8 +222,6 @@ namespace Microsoft.Samples.Kinect.SkeletonBasics
                 {
                     skeletons = new Skeleton[skeletonFrame.SkeletonArrayLength];
                     skeletonFrame.CopySkeletonDataTo(skeletons);
-                    //A ALTERAR
-
                 }
             }
 
@@ -236,36 +238,25 @@ namespace Microsoft.Samples.Kinect.SkeletonBasics
 
                         if (skel.TrackingState == SkeletonTrackingState.Tracked)
                         {
-                            DrawBonesAndJointsGray(skel, dc);
-                            if ((IsAlignedBodyAndArms(skel) && AreFeetTogether(skel)) || (IsAlignedBodyAndArms(skel) && AreFeetSeparate(skel)))
-                            {
-                                DrawBonesAndJointsGreen(skel, dc);
-
-                            }
-
-                            else if ((IsAlignedBodyAndArms(skel) && !AreFeetSeparate(skel) && !AreFeetTogether(skel)) || (!IsAlignedBodyAndArms(skel) && AreFeetSeparate(skel) && !AreFeetTogether(skel)) || (!IsAlignedBodyAndArms(skel) && !AreFeetSeparate(skel) && AreFeetTogether(skel)))
-                            {
-                                DrawBonesAndJointsYellow(skel, dc);
-                            }
-
-                            else if (skel.TrackingState == SkeletonTrackingState.PositionOnly)
-                            {
-                                dc.DrawEllipse(
-                                this.centerPointBrush,
-                                null,
-                                this.SkeletonPointToScreen(skel.Position),
-                                BodyCenterThickness,
-                                BodyCenterThickness);
-                            }
-                            else DrawBonesAndJointsRed(skel, dc);
+                            this.DrawBonesAndJoints(skel, dc);
+                        }
+                        else if (skel.TrackingState == SkeletonTrackingState.PositionOnly)
+                        {
+                            dc.DrawEllipse(
+                            this.centerPointBrush,
+                            null,
+                            this.SkeletonPointToScreen(skel.Position),
+                            BodyCenterThickness,
+                            BodyCenterThickness);
                         }
                     }
-
-                    // prevent drawing outside of our render area
-                    this.drawingGroup.ClipGeometry = new RectangleGeometry(new Rect(0.0, 0.0, RenderWidth, RenderHeight));
                 }
+
+                // prevent drawing outside of our render area
+                this.drawingGroup.ClipGeometry = new RectangleGeometry(new Rect(0.0, 0.0, RenderWidth, RenderHeight));
             }
         }
+
 
         /// <summary>
         /// Draws a skeleton's bones and joints
@@ -324,196 +315,7 @@ namespace Microsoft.Samples.Kinect.SkeletonBasics
             }
         }
 
-        private void DrawBonesAndJointsGreen(Skeleton skeleton, DrawingContext drawingContext)
-        {
-            // Render Torso
-            this.DrawBone(skeleton, drawingContext, JointType.Head, JointType.ShoulderCenter);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderRight);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.Spine);
-            this.DrawBone(skeleton, drawingContext, JointType.Spine, JointType.HipCenter);
-            this.DrawBone(skeleton, drawingContext, JointType.HipCenter, JointType.HipLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.HipCenter, JointType.HipRight);
-
-            // Left Arm
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderLeft, JointType.ElbowLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.ElbowLeft, JointType.WristLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.WristLeft, JointType.HandLeft);
-
-            // Right Arm
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderRight, JointType.ElbowRight);
-            this.DrawBone(skeleton, drawingContext, JointType.ElbowRight, JointType.WristRight);
-            this.DrawBone(skeleton, drawingContext, JointType.WristRight, JointType.HandRight);
-
-            // Left Leg
-            this.DrawBone(skeleton, drawingContext, JointType.HipLeft, JointType.KneeLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.KneeLeft, JointType.AnkleLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.AnkleLeft, JointType.FootLeft);
-
-            // Right Leg
-            this.DrawBone(skeleton, drawingContext, JointType.HipRight, JointType.KneeRight);
-            this.DrawBone(skeleton, drawingContext, JointType.KneeRight, JointType.AnkleRight);
-            this.DrawBone(skeleton, drawingContext, JointType.AnkleRight, JointType.FootRight);
-
-            // Render Joints
-            foreach (Joint joint in skeleton.Joints)
-            {
-                Brush drawBrush = null;
-
-
-                drawBrush = this.trackedJointBrush;
-
-
-
-                if (drawBrush != null)
-                {
-                    drawingContext.DrawEllipse(drawBrush, null, this.SkeletonPointToScreen(joint.Position), JointThickness, JointThickness);
-                }
-            }
-        }
-
-        private void DrawBonesAndJointsRed(Skeleton skeleton, DrawingContext drawingContext)
-        {
-            // Render Torso
-            this.DrawBone(skeleton, drawingContext, JointType.Head, JointType.ShoulderCenter);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderRight);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.Spine);
-            this.DrawBone(skeleton, drawingContext, JointType.Spine, JointType.HipCenter);
-            this.DrawBone(skeleton, drawingContext, JointType.HipCenter, JointType.HipLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.HipCenter, JointType.HipRight);
-
-            // Left Arm
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderLeft, JointType.ElbowLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.ElbowLeft, JointType.WristLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.WristLeft, JointType.HandLeft);
-
-            // Right Arm
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderRight, JointType.ElbowRight);
-            this.DrawBone(skeleton, drawingContext, JointType.ElbowRight, JointType.WristRight);
-            this.DrawBone(skeleton, drawingContext, JointType.WristRight, JointType.HandRight);
-
-            // Left Leg
-            this.DrawBone(skeleton, drawingContext, JointType.HipLeft, JointType.KneeLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.KneeLeft, JointType.AnkleLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.AnkleLeft, JointType.FootLeft);
-
-            // Right Leg
-            this.DrawBone(skeleton, drawingContext, JointType.HipRight, JointType.KneeRight);
-            this.DrawBone(skeleton, drawingContext, JointType.KneeRight, JointType.AnkleRight);
-            this.DrawBone(skeleton, drawingContext, JointType.AnkleRight, JointType.FootRight);
-
-            // Render Joints
-            foreach (Joint joint in skeleton.Joints)
-            {
-                Brush drawBrush = null;
-
-
-                drawBrush = this.wrongJointBrush;
-
-
-
-                if (drawBrush != null)
-                {
-                    drawingContext.DrawEllipse(drawBrush, null, this.SkeletonPointToScreen(joint.Position), JointThickness, JointThickness);
-                }
-            }
-        }
-        private void DrawBonesAndJointsYellow(Skeleton skeleton, DrawingContext drawingContext)
-        {
-            // Render Torso
-            this.DrawBone(skeleton, drawingContext, JointType.Head, JointType.ShoulderCenter);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderRight);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.Spine);
-            this.DrawBone(skeleton, drawingContext, JointType.Spine, JointType.HipCenter);
-            this.DrawBone(skeleton, drawingContext, JointType.HipCenter, JointType.HipLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.HipCenter, JointType.HipRight);
-
-            // Left Arm
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderLeft, JointType.ElbowLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.ElbowLeft, JointType.WristLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.WristLeft, JointType.HandLeft);
-
-            // Right Arm
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderRight, JointType.ElbowRight);
-            this.DrawBone(skeleton, drawingContext, JointType.ElbowRight, JointType.WristRight);
-            this.DrawBone(skeleton, drawingContext, JointType.WristRight, JointType.HandRight);
-
-            // Left Leg
-            this.DrawBone(skeleton, drawingContext, JointType.HipLeft, JointType.KneeLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.KneeLeft, JointType.AnkleLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.AnkleLeft, JointType.FootLeft);
-
-            // Right Leg
-            this.DrawBone(skeleton, drawingContext, JointType.HipRight, JointType.KneeRight);
-            this.DrawBone(skeleton, drawingContext, JointType.KneeRight, JointType.AnkleRight);
-            this.DrawBone(skeleton, drawingContext, JointType.AnkleRight, JointType.FootRight);
-
-            // Render Joints
-            foreach (Joint joint in skeleton.Joints)
-            {
-                Brush drawBrush = null;
-
-
-                drawBrush = this.inferredJointBrush;
-
-
-
-                if (drawBrush != null)
-                {
-                    drawingContext.DrawEllipse(drawBrush, null, this.SkeletonPointToScreen(joint.Position), JointThickness, JointThickness);
-                }
-            }
-        }
-
-        private void DrawBonesAndJointsGray(Skeleton skeleton, DrawingContext drawingContext)
-        {
-            // Render Torso
-            this.DrawBone(skeleton, drawingContext, JointType.Head, JointType.ShoulderCenter);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.ShoulderRight);
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderCenter, JointType.Spine);
-            this.DrawBone(skeleton, drawingContext, JointType.Spine, JointType.HipCenter);
-            this.DrawBone(skeleton, drawingContext, JointType.HipCenter, JointType.HipLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.HipCenter, JointType.HipRight);
-
-            // Left Arm
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderLeft, JointType.ElbowLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.ElbowLeft, JointType.WristLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.WristLeft, JointType.HandLeft);
-
-            // Right Arm
-            this.DrawBone(skeleton, drawingContext, JointType.ShoulderRight, JointType.ElbowRight);
-            this.DrawBone(skeleton, drawingContext, JointType.ElbowRight, JointType.WristRight);
-            this.DrawBone(skeleton, drawingContext, JointType.WristRight, JointType.HandRight);
-
-            // Left Leg
-            this.DrawBone(skeleton, drawingContext, JointType.HipLeft, JointType.KneeLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.KneeLeft, JointType.AnkleLeft);
-            this.DrawBone(skeleton, drawingContext, JointType.AnkleLeft, JointType.FootLeft);
-
-            // Right Leg
-            this.DrawBone(skeleton, drawingContext, JointType.HipRight, JointType.KneeRight);
-            this.DrawBone(skeleton, drawingContext, JointType.KneeRight, JointType.AnkleRight);
-            this.DrawBone(skeleton, drawingContext, JointType.AnkleRight, JointType.FootRight);
-
-            // Render Joints
-            foreach (Joint joint in skeleton.Joints)
-            {
-                Brush drawBrush = null;
-
-
-                drawBrush = this.inicialJointBrush;
-
-
-
-                if (drawBrush != null)
-                {
-                    drawingContext.DrawEllipse(drawBrush, null, this.SkeletonPointToScreen(joint.Position), JointThickness, JointThickness);
-                }
-            }
-        }
+       
 
         /// <summary>
         /// Maps a SkeletonPoint to lie within our render space and converts to Point
@@ -564,6 +366,23 @@ namespace Microsoft.Samples.Kinect.SkeletonBasics
             }
 
             drawingContext.DrawLine(drawPen, this.SkeletonPointToScreen(joint0.Position), this.SkeletonPointToScreen(joint1.Position));
+            
+            Pen correctMove = new Pen(Brushes.Green, 5);
+            Pen incorrectMove = new Pen(Brushes.Red, 5);
+            Pen closeToMove = new Pen(Brushes.Yellow, 5);
+            
+            if ((IsAlignedBodyAndArms(skeleton) && AreFeetTogether(skeleton)) || (IsAlignedBodyAndArms(skeleton) && AreFeetSeparate(skeleton)))
+            {
+                trackedBonePen = correctMove;
+            }
+            else if ((IsAlignedBodyAndArms(skeleton) && !AreFeetSeparate(skeleton) && !AreFeetTogether(skeleton)) || (!IsAlignedBodyAndArms(skeleton) && AreFeetSeparate(skeleton) && !AreFeetTogether(skeleton)) || (!IsAlignedBodyAndArms(skeleton) && !AreFeetSeparate(skeleton) && AreFeetTogether(skeleton)))
+            {
+                trackedBonePen = closeToMove;
+            }
+            else
+            {
+                trackedBonePen = incorrectMove;
+            }
         }
 
         /// <summary>
@@ -622,6 +441,7 @@ namespace Microsoft.Samples.Kinect.SkeletonBasics
             double ShouRPosX = received.Joints[JointType.ShoulderRight].Position.X;
             double ShouRPosY = received.Joints[JointType.ShoulderRight].Position.Y;
             double ShouRPosZ = received.Joints[JointType.ShoulderRight].Position.Z;
+
             //have to change to correspond to the 5% error
             //distance from Shoulder to Wrist for the projection in line with shoulder
             double distShouLtoWristL = ShouLPosY - WriLPosY;
